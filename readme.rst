@@ -1,3 +1,16 @@
+Description
+Health care workers (HCWs) are at risk of experiencing accidental morbidity and mortality due to HIV and other blood borne pathogens (BBP) such as Hepatitis B Virus (HBV), Hepatitis C Virus (HCV) among others in the course of their duty. The need to cover HCWs against the high risk of HIV and other BBP emanating from accidental occupational exposures is thus urgent. Care for Carers (C4C) is a mobile based system developed to support (HCWs to enable HCWs register into the platform, report exposures and receive adherence messaging. The platform will provide a monitoring process that will follow the HCWs until they complete the post exposure prophylaxes and testing up to the sixth month unless they opt out of the platform.
+
+Goal
+To improve reporting of injuries as well as increase uptake of, and adherence to PEP therapy among HWs in Kenya.
+
+Outcome Measures
+Secure and confidential mode of PEP communication among HCW.
+Ability for HCW and caregivers to register to the system and report injuries.
+Provision of PEP knowledge and communication materials.
+Sending automatic reminders to affected HCW.
+Providing a data management and reporting platform on PEP surveillance.
+
 ###################
 What is CodeIgniter
 ###################
