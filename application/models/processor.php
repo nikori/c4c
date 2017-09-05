@@ -1,4 +1,5 @@
 <?php
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -141,19 +142,19 @@ class processor extends CI_Model {
                     $this->insert_outbox_not_registered($mno, $new_level);
                     $this->insert_patientdetails_insert_number($mno, $new_level);
 
-                    echo 'Inserted mobile number to patientdetails and tbl_logs_outbox ; send- welcome to c4c send your name and id ,text=sent';
+                    //echo 'Inserted mobile number to patientdetails and tbl_logs_outbox ; send- welcome to c4c send your name and id ,text=sent';
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C") {
 //Send pep to start registration -sent when one sends a non pep keyword                    
                     $msg_id = 68;
                     $this->insert_to_outbox($mno, $msg_id);
-                    echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                    //echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android == "REP" && $reg_rep_android != "C4C") {
 //Send pep to start registration -sent when one sends a non pep keyword
                     $msg_id = 68;
                     $this->insert_to_outbox($mno, $msg_id);
-                    echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                   // echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
                 }
                 if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C" && $reg_rep_android != "YES" && $reg_rep_android != "NO") {
                     $h_level = $this->getLevel($mno, $level);
@@ -241,79 +242,7 @@ class processor extends CI_Model {
         }
     }
 
-//    function broadcast() {
-//
-//
-//        $broad = $this->db->query("SELECT id,approval_status,date_created,county_id,sub_county_id,facility_id,msg,cadre_id,sms_status,sms_datetime FROM tbl_sms_broadcast WHERE sms_status='1'");
-//        
-//        if ($broad->num_rows() > 0) {
-//           
-//            $sms = $broad->result();
-//            foreach ($sms as $x) {
-//                
-//                $county_id = $x->county_id;
-//                $msg_id = $x->id;
-//                $sub_county_id = $x->sub_county_id;
-//                $facility_id = $x->facility_id;
-//                $cadre_id = $x->cadre_id;
-//                $approval_status = $x->approval_status;
-//                $send_date = $x->date_created;
-//
-//                $current_date = date("Y-m-d");
-//                $a_explode = explode(" ", $send_date);
-//                $today = $a_explode[0];
-//
-//
-//
-//                if ($approval_status == 'Approved' && $current_date == $today) {
-//
-//                    $list = $this->db->query("SELECT  county_id,sub_county_id,facility_id,cadre_id,mobile_no FROM  tbl_patientdetails 
-//                        INNER JOIN
-//                        tbl_master_facility ON tbl_master_facility.code = tbl_patientdetails.facility_id
-//                        INNER JOIN
-//                        tbl_cadre ON tbl_cadre.id = tbl_patientdetails.cadre_id WHERE
-//                        county_id = '$county_id' OR sub_county_id = '$sub_county_id' OR cadre_id = '$cadre_id' 
-//                        OR facility_id = '$facility_id'");
-//                    if ($list->num_rows() > 0) {
-//                        $sms_list = $list->result();
-//                        foreach ($sms_list as $x) {
-//                            $mno = $x->mobile_no;
-//                            $this->insert_tbl_logs_broadcast($mno, $msg_id);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        
-//         
-//    }
-
-    function broadcast() {
-        $broad = $this->db->query("SELECT approval_status,id,date_created,county_id,sub_county_id,facility_id,msg,cadre_id,sms_status,sms_datetime FROM tbl_sms_broadcast WHERE sms_status='3'");
-        if ($broad->num_rows() > 0) {
-            $sms = $broad->result();
-            foreach ($sms as $x) {
-                $county_id = $x->county_id;
-                $msg_id = $x->id;
-                $sub_county_id = $x->sub_county_id;
-                $facility_id = $x->facility_id;
-                $cadre_id = $x->cadre_id;
-                $send_date = $x->date_created;
-                $approval_status = $x->approval_status;
-
-                $current_date = date("Y-m-d");
-                $a_explode = explode(" ", $send_date);
-                $today = $a_explode[0];
-
-                $this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
-            }
-            if ($current_date === $today) {
-                //$this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
-            }
-        }
-    }
-
-    function b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id) {
+    function broadcast($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id) {
 
         $this->db->select('mobile_no');
         $this->db->from('tbl_patientdetails');
@@ -355,9 +284,8 @@ class processor extends CI_Model {
     }
 
     function insert_tbl_logs_broadcast($mno, $msg_id) {
-        echo $mno . "  " . $msg_id . "<br>";
-        //$query = $this->db->query("INSERT INTO tbl_logs_broadcast (message_id,mobile_no) VALUES ('$msg_id','$mno')");
-        //$this->broadcast_sender();
+        $query = $this->db->query("INSERT INTO tbl_logs_broadcast (message_id,mobile_no) VALUES ('$msg_id','$mno')");
+       
     }
 
     function broadcast_sender() {
@@ -367,118 +295,29 @@ class processor extends CI_Model {
             $messages_id = $value->message_id;
             $mobile_no = $value->mobile_no;
 
-
             $query_2 = $this->db->query("SELECT msg,id FROM tbl_sms_broadcast WHERE id='$messages_id'")->result();
 
             foreach ($query_2 as $value) {
-                $message = $value->msg;
-
-//$query_4 = $this->db->query("SELECT * FROM tbl_clients WHERE facility_id = '$code'")->result();
-
-
-                $senderid = "40149";
+                $msg = $value->msg;
 
                 $mobile = substr($mobile_no, -9);
                 $len = strlen($mobile);
+
                 if ($len < 10) {
-                    $to = "254" . $mobile;
+                    $dest = "+254" . $mobile;                    
                 }
-
-                if ($to <> '') {
-                    $from = $senderid;
-//$id = $id;
-                    $text = $message;
-                    $notifyUrl = "197.248.10.20/infobip/notify.php";
-                    $notifyContentType = "application/json";
-                    $callbackData = "1";
-                    $username = "hdindi";
-                    $password = "Harr1s123!@#";
-                    $postUrl = "https://api.infobip.com/sms/1/text/advanced";
-// creating an object for sending SMS
-                    $destination = array("to" => $to);
-                    $message = array("from" => $from,
-                        "destinations" => array($destination),
-                        "text" => $text,
-                        "notifyUrl" => $notifyUrl,
-                        "notifyContentType" => $notifyContentType,
-                        "callbackData" => $callbackData);
-                    $postData = array("messages" => array($message));
-                    $postDataJson = json_encode($postData);
-                    $ch = curl_init();
-                    $header = array("Content-Type:application/json", "Accept:application/json");
-                    curl_setopt($ch, CURLOPT_URL, $postUrl);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-                    curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-                    curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
-                    curl_setopt($ch, CURLOPT_POST, 1);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postDataJson);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-// response of the POST request
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $responseBody = json_decode($response);
-                    curl_close($ch);
-                    if ($httpCode >= 200 && $httpCode < 300) {
-                        $messages = $responseBody->messages;
-                        echo '<h4>Response</h4><br>';
-                        ?>
-
-                        <!--        End Infobip API-->
-
-
-                        <div>
-                            <table id="logs_table" class="table table-condensed">
-                                <thead>
-                                    <tr>
-                                    <th>Message ID</th>
-                                    <th>To</th>
-                                    <th>Status Group ID</th>
-                                    <th>Status Group Name</th>
-                                    <th>Status ID</th>
-                                    <th>Status Name</th>
-                                    <th>Status Description</th>
-                                    <th>SMS Count</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    foreach ($messages as $message) {
-                                        echo "<tr>";
-                                        echo "<td>" . $message->messageId . "</td>";
-                                        echo "<td>" . $message->to . "</td>";
-                                        echo "<td>" . $message->status->groupId . "</td>";
-                                        echo "<td>" . $message->status->groupName . "</td>";
-                                        echo "<td>" . $message->status->id . "</td>";
-                                        echo "<td>" . $message->status->name . "</td>";
-                                        echo "<td>" . $message->status->description . "</td>";
-                                        echo "<td>" . $message->smsCount . "</td>";
-                                        echo "</tr>";
-                                    }
-                                    ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <?php
-                    }
+                if ($dest <> '') {
+                    //call sender api fn to send messages
+                    $this->sender_api($dest, $msg);
                 } else {
-                    ?>
-                    <div class="alert alert-danger" role="alert">
-                        <b>An error occurred!</b> Reason: Phone number is missing
-                    </div>
-                    <?php
+                    $out_put = " Reason: Phone number is missing";
+                    return $out_put;
                 }
 //update status to sent to stop loops
                 $status = '2';
-                $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET STATUS ='$status' where mobile_no='$to' ;");
-                $query_update = $this->db->query("UPDATE tbl_sms_broadcast SET sms_STATUS ='$status';");
+                $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET STATUS ='$status' where mobile_no='$to'");
+                $query_update = $this->db->query("UPDATE tbl_sms_broadcast SET sms_STATUS ='$status' ");
             }
-
-
-//                $query_3 = $this->db->query("SELECT * FROM tbl_users WHERE facility_id = '$code'")->result();
         }
     }
 
@@ -489,9 +328,9 @@ class processor extends CI_Model {
             $msg_id = $hc_level + 1;
             $report = $msg_id + 1;
             $id = $value->id;
-//Current date
+            //Current date
             $current_time = date("Y-m-d");
-//Explode text message from inbox
+            //Explode text message from inbox
             $msg = explode(" ", $text);
             $count_msg = count($msg);
 
@@ -509,9 +348,9 @@ class processor extends CI_Model {
                     $l_name = $msg[1];
                     $national_id = $msg[2];
 
-                    echo "First Name = " . $f_name . "</br>";
-                    echo "Lsst Name = " . $l_name . "</br>";
-                    echo "National ID = " . $national_id . "</br>";
+//                    echo "First Name = " . $f_name . "</br>";
+//                    echo "Lsst Name = " . $l_name . "</br>";
+//                    echo "National ID = " . $national_id . "</br>";
 
                     if (is_string($f_name) && is_string($l_name) && ctype_digit($national_id) && ($national_id > 0 || $national_id <= 30)) {
                         $this->update_patientdetails($f_name, $l_name, $national_id, $msg_id, $mno);
@@ -590,7 +429,7 @@ class processor extends CI_Model {
                     } else {
                         $msg_id = 57;
                         $this->insert_outbox($mno, $msg_id);
-                        echo 'User inserted a number grater than 9';
+                        //echo 'User inserted a number grater than 9';
                     }
                 } else {
                     $msg_id = 57;
@@ -668,7 +507,7 @@ class processor extends CI_Model {
                     } else {
                         $msg_id = 66;
                         $this->insert_outbox($mno, $msg_id);
-                        echo 'User inserted a number grater than 9';
+                        //echo 'User inserted a number grater than 9';
                     }
                 } else {
                     $msg_id = 66;
@@ -1045,7 +884,8 @@ class processor extends CI_Model {
     }
 
     function sender() {
-        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level,STATUS FROM tbl_logs_outbox WHERE STATUS='1' ORDER BY id DESC")->result();
+
+        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level,STATUS FROM tbl_logs_outbox WHERE STATUS='1' ORDER BY id DESC LIMIT 30")->result();
         foreach ($query as $value) {
             $id = $value->id;
             $messages_id = $value->message_id;
@@ -1063,7 +903,7 @@ class processor extends CI_Model {
                     foreach ($query_name as $fnm) {
                         $name = $fnm->f_name;
 //substr_replace(string,replacement,start,length)
-                        $message = substr_replace($text, $name, 6, 0);
+                        $msg = substr_replace($text, $name, 6, 0);
                         //echo "Text -" . $message;
                     }
                 } else if ($welcome !== false) {
@@ -1071,78 +911,66 @@ class processor extends CI_Model {
                     foreach ($query_name as $nm) {
                         $fname = $nm->f_name;
 //substr_replace(string,replacement,start,length)
-                        $message = substr_replace($text, $fname, 8, 0);
+                        $msg = substr_replace($text, $fname, 8, 0);
                     }
                 } else {
 
-                    $message = $text;
+                    $msg = $text;
                 }
-
-
-                $senderid = "40149";
                 $mobile = substr($mobile_no, -9);
                 $len = strlen($mobile);
 
-
-
                 if ($len < 10) {
-                    $to = "254" . $mobile;
+                    $dest = "+254" . $mobile;
                 }
 
-                if ($to <> '') {
-                    $from = $senderid;
-//$id = $id;
-                    $text = $message;
-                    $notifyUrl = "197.248.10.20/infobip/notify.php";
-                    $notifyContentType = "application/json";
-                    $callbackData = "1";
-                    $username = "hdindi";
-                    $password = "Harr1s123!@#";
-                    $postUrl = "https://api.infobip.com/sms/1/text/advanced";
-// creating an object for sending SMS
-                    $destination = array("to" => $to);
-                    $message = array("from" => $from,
-                        "destinations" => array($destination),
-                        "text" => $text,
-                        "notifyUrl" => $notifyUrl,
-                        "notifyContentType" => $notifyContentType,
-                        "callbackData" => $callbackData);
-                    $postData = array("messages" => array($message));
-                    $postDataJson = json_encode($postData);
-                    $ch = curl_init();
-                    $header = array("Content-Type:application/json", "Accept:application/json");
-                    curl_setopt($ch, CURLOPT_URL, $postUrl);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-                    curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-                    curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
-                    curl_setopt($ch, CURLOPT_POST, 1);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postDataJson);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-// response of the POST request
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $responseBody = json_decode($response);
-                    curl_close($ch);
-                    if ($httpCode >= 200 && $httpCode < 300) {
-                        $messages = $responseBody->messages;
-                        // echo '<h4>Response</h4><br>';//                        
-                    }
+                if ($dest <> '') {
+
+                    //call sender api fn to send messages
+                    $this->sender_api($dest, $msg);
                 } else {
-                    ?>
-                    <div class="alert alert-danger" role="alert">
-                        <b>An error occurred!</b> Reason: Phone number is missing
-                    </div>
-                    <?php
+                    $out_put = " Reason: Phone number is missing";
+                    return $out_put;
                 }
             }
         }
-//update status to 2(sent) to avoid loops.
-        $status = '2';
-        $query_update = $this->db->query("UPDATE tbl_logs_outbox SET STATUS ='$status' where mobile_no='$to';");
+    }
+
+    function sender_api($dest, $msg) {
+        
+        $senderid = "40149";
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_PORT => "3001",
+            CURLOPT_URL => "http://197.248.10.20:3001/api/senders/sender",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_HTTPHEADER => array(
+                "cache-control: no-cache",
+                "destination: $dest",
+                "msg: $msg",
+                "source: $senderid"
+            ),
+        ));
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+
+        curl_close($curl);
+
+        if ($err) {
+            return "cURL Error #:" . $err;
+        } else {
+            $status = '2';
+            $query_update = $this->db->query("UPDATE tbl_logs_outbox SET STATUS ='$status' where mobile_no='$dest'");
+            return $response;
+        }
     }
 
     function confirmatory_message() {
@@ -1234,12 +1062,12 @@ class processor extends CI_Model {
                                 $hours = $no_after / 3600;
                             }
 
-                            if ($r_days == 1 && $text_id != 111) {
+                            if ($r_days == 14 && $text_id != 111) {
                                 $msg_id = $text_id + 1;
                                 //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
                                 $this->insert_autobroadcast($mno, $msg_id);
                             }
-                            if ($r_days == 1 && $text_id == 111) {
+                            if ($r_days == 14 && $text_id == 111) {
                                 $msg_id = $text_id - 19;
                                 //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
                                 $this->insert_autobroadcast($mno, $msg_id);
@@ -1261,107 +1089,6 @@ class processor extends CI_Model {
         //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
         $query = $this->db->query("INSERT INTO tbl_logs_outbox (message_id,mobile_no) VALUES ('$msg_id','$mno')");
         //$this->auto_broadcast_sender();
-    }
-
-    function auto_broadcast_sender() {
-        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level,STATUS FROM tbl_logs_outbox WHERE STATUS='1' ORDER BY id DESC LIMIT 30")->result();
-        foreach ($query as $value) {
-            $id = $value->id;
-            $messages_id = $value->message_id;
-            $mobile_no = $value->mobile_no;
-
-//insert HCW name into text
-            $query_msgID = $this->db->query("SELECT messages,id FROM tbl_messages WHERE id='$messages_id'")->result();
-            foreach ($query_msgID as $msg_ID) {
-                $text = $msg_ID->messages;
-                $Hello = strpos($text, 'Hello', 0);
-                $welcome = strpos($text, 'Welcome', 0);
-
-                if ($Hello !== false) {
-                    $query_name = $this->db->query("SELECT f_name,mobile_no FROM tbl_patientdetails  WHERE mobile_no='$mobile_no'")->result();
-                    foreach ($query_name as $fnm) {
-                        $name = $fnm->f_name;
-//substr_replace(string,replacement,start,length)
-                        $message = substr_replace($text, $name, 6, 0);
-                        //echo "Text -" . $message;
-                    }
-                } else if ($welcome !== false) {
-                    $query_name = $this->db->query("SELECT f_name,mobile_no FROM tbl_patientdetails  WHERE mobile_no='$mobile_no'")->result();
-                    foreach ($query_name as $nm) {
-                        $fname = $nm->f_name;
-//substr_replace(string,replacement,start,length)
-                        $message = substr_replace($text, $fname, 8, 0);
-                    }
-                } else {
-
-                    $message = $text;
-                }
-
-
-                $senderid = "40149";
-                $mobile = substr($mobile_no, -9);
-                $len = strlen($mobile);
-
-
-
-                if ($len < 10) {
-                    $to = "254" . $mobile;
-                }
-
-                if ($to <> '') {
-                    $from = $senderid;
-//$id = $id;
-                    $text = $message;
-                    $notifyUrl = "197.248.10.20/infobip/notify.php";
-                    $notifyContentType = "application/json";
-                    $callbackData = "1";
-                    $username = "hdindi";
-                    $password = "Harr1s123!@#";
-                    $postUrl = "https://api.infobip.com/sms/1/text/advanced";
-// creating an object for sending SMS
-                    $destination = array("to" => $to);
-                    $message = array("from" => $from,
-                        "destinations" => array($destination),
-                        "text" => $text,
-                        "notifyUrl" => $notifyUrl,
-                        "notifyContentType" => $notifyContentType,
-                        "callbackData" => $callbackData);
-                    $postData = array("messages" => array($message));
-                    $postDataJson = json_encode($postData);
-                    $ch = curl_init();
-                    $header = array("Content-Type:application/json", "Accept:application/json");
-                    curl_setopt($ch, CURLOPT_URL, $postUrl);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-                    curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-                    curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
-                    curl_setopt($ch, CURLOPT_POST, 1);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postDataJson);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-// response of the POST request
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $responseBody = json_decode($response);
-                    curl_close($ch);
-                    if ($httpCode >= 200 && $httpCode < 300) {
-                        $messages = $responseBody->messages;
-                        // echo '<h4>Response</h4><br>';//                        
-                    }
-                } else {
-                    ?>
-                    <div class="alert alert-danger" role="alert">
-                        <b>An error occurred!</b> Reason: Phone number is missing
-                    </div>
-                    <?php
-                }
-            }
-        }
-//update status to 2(sent) to avoid loops.
-        $status = '2';
-        $query_update = $this->db->query("UPDATE tbl_logs_outbox SET STATUS ='$status' where mobile_no='$to';");
     }
 
     function responses_to_adherence() {
@@ -2180,7 +1907,7 @@ class processor extends CI_Model {
             if ($minutes == 12960) {
                 $query_date = $this->db->query("SELECT response,p_details_id FROM tbl_reports WHERE p_details_id='$hcw_id' AND  response='1' OR response='2' ");
                 if ($query_date->num_rows() > 0) {
-                    $text = 21;
+                    $text = 23;
                     $adherence_level = 10;
                     $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
                 }
@@ -2188,27 +1915,11 @@ class processor extends CI_Model {
             if ($minutes == 14400) {
                 $query_date = $this->db->query("SELECT response,p_details_id FROM tbl_reports WHERE p_details_id='$hcw_id AND response='2' ");
                 if ($query_date->num_rows() > 0) {
-                    $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE  msg LIKE '%no'  and mobile_no='$mob_no'");
-                    if ($query_date_created->num_rows() > 0) {
-                        $date = $query_date_created->result();
-                        foreach ($date as $dates) {
-                            $r_date = $dates->date_received;
-                            $date_sent = strtotime($r_date);
-                            $datetime = strtotime("now");
-                            $substract = $datetime - $date_sent;
-                            $r_days = $substract / 86400;
-                            $days = round($r_days);
-
-
-
-//check if response yes was received on day 4
-                            if ($query_date_created->num_rows() < 0 && $days == 1) {
-                                echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
-                                $text = 23;
-                                $adherence_level = 11;
-                                $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
-                            }
-                        }
+                    if ($query_date_created->num_rows() < 0 && $days == 1) {
+                        echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
+                        $text = 23;
+                        $adherence_level = 11;
+                        $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
                     }
                 }
             }
@@ -2219,7 +1930,7 @@ class processor extends CI_Model {
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
             if ($minutes == 20160) {
-                $text = 55;
+                $text = 22;
                 $adherence_level = 13;
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
@@ -2233,28 +1944,10 @@ class processor extends CI_Model {
                 $query_date = $this->db->query("SELECT response,p_details_id FROM tbl_reports WHERE p_details_id='$hcw_id' AND response='2' ");
                 if ($query_date->num_rows() > 0) {
 
-                    $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE  msg LIKE '%no'  and mobile_no='$mob_no'");
-                    if ($query_date_created->num_rows() > 0) {
-                        $date = $query_date_created->result();
-                        foreach ($date as $dates) {
-                            $r_date = $dates->date_received;
-                            $date_sent = strtotime($r_date);
-                            $datetime = strtotime("now");
-                            $substract = $datetime - $date_sent;
-                            $r_days = $substract / 86400;
-                            $days = round($r_days);
-
-
-
-                            //check if response yes was received on day 4
-                            if ($query_date_created->num_rows() < 0 && $days == 1) {
-                                echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
-                                $text = 27;
-                                $adherence_level = 15;
-                                $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
-                            }
-                        }
-                    }
+                    //echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
+                    $text = 27;
+                    $adherence_level = 15;
+                    $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
                 }
             }
             if ($minutes == 30240) {
@@ -2268,7 +1961,7 @@ class processor extends CI_Model {
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
             if ($minutes == 40320) {
-                $text = 72;
+                $text = 43;
                 $adherence_level = 18;
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
@@ -2278,7 +1971,7 @@ class processor extends CI_Model {
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
             if ($minutes == 44640) {
-                $text = 73;
+                $text = 44;
                 $adherence_level = 20;
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
@@ -2317,10 +2010,16 @@ class processor extends CI_Model {
                 $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
             }
             if ($minutes == 135360) {
-                $text = 83;
-                $adherence_level = 27;
-                $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
+                $query_date = $this->db->query("SELECT response,p_details_id FROM tbl_reports WHERE p_details_id='$hcw_id' AND response='2' ");
+                if ($query_date->num_rows() > 0) {
+
+                    //echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
+                    $text = 83;
+                    $adherence_level = 27;
+                    $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
+                }
             }
+
             if ($minutes == 198720) {
 
                 $text = 80;
@@ -2352,77 +2051,45 @@ class processor extends CI_Model {
 
             $query_response = $this->db->query("SELECT response from tbl_reports where p_details_id='$hcw_id' and response ='0'");
             if ($query_response->num_rows() > 0) {
-                $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE msg LIKE '%no'  and mobile_no='$mob_no'");
-                if ($query_date_created->num_rows() > 0) {
-                    $date = $query_date_created->result();
-                    foreach ($date as $dates) {
-                        $r_date = $dates->date_received;
-                        $date_sent = strtotime($r_date);
-                        $datetime = strtotime("now");
-                        $substract = $datetime - $date_sent;
-                        $r_days = $substract / 86400;
-                        $days = round($r_days);
-                        $r_minutes = $substract * 60;
-                        $minutes = round($r_minutes);
-
-// echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
-                            if ($minutes == 2880) {
-                                $text = 13;
-                                $adherence_level = 2;
-                                $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
-                            }
-                        
-                    }
+                if ($minutes == 2880) {
+                    $text = 13;
+                    $adherence_level = 2;
+                    $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
+                }
+            }
+            $query_response = $this->db->query("SELECT response from tbl_reports where p_details_id='$hcw_id' and response ='0'");
+            if ($query_response->num_rows() > 0) {
+                if ($minutes == 3600) {
+                    $text = 15;
+                    $adherence_level = 3;
+                    $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
                 }
             }
 
-            $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE msg LIKE '%no'  and mobile_no='$mob_no'");
-            if ($query_date_created->num_rows() > 0) {
-                $date = $query_date_created->result();
-                foreach ($date as $dates) {
-                    $r_date = $dates->date_received;
-                    $date_sent = strtotime($r_date);
-                    $datetime = strtotime("now");
-                    $substract = $datetime - $date_sent;
-                    $r_days = $substract / 86400;
-                    $days = round($r_days);
-                    $r_minutes = $substract * 60;
-                    $minutes = round($r_minutes);
 
 
 
-                 
-// echo "</br>" . "Minutes after message was sent from tbl_outbox table = " . $r_mins . "</br> ";
-                        if ($minutes == 3600) {
-                            $text = 15;
-                            $adherence_level = 3;
-                            $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
-                        }
-                    
-                }
-            }
+//            $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE msg LIKE '%yes'  and mobile_no='$mob_no'");
+//            if ($query_date_created->num_rows() > 0) {
+//                $date = $query_date_created->result();
+//                foreach ($date as $dates) {
+//                    $r_date = $dates->date_received;
+//                    $date_sent = strtotime($r_date);
+//                    $datetime = strtotime("now");
+//                    $substract = $datetime - $date_sent;
+//                    $r_days = $substract / 86400;
+//                    $response_hour = $substract / 3600;
+//                    $res_hours = round($response_hour);
+//                    $days = round($r_days);
+//
+//                    if ($minutes == 4320 && $res_hours <= 1) {
+//                        $text = 71;
+//                        $adherence_level = 4;
+//                        $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
+//                    }
+//                }
+//            }
 
-            $query_date_created = $this->db->query("SELECT date_received,msg FROM `tbl_logs_inbox` WHERE msg LIKE '%yes'  and mobile_no='$mob_no'");
-            if ($query_date_created->num_rows() > 0) {
-                $date = $query_date_created->result();
-                foreach ($date as $dates) {
-                    $r_date = $dates->date_received;
-                    $date_sent = strtotime($r_date);
-                    $datetime = strtotime("now");
-                    $substract = $datetime - $date_sent;
-                    $r_days = $substract / 86400;
-                    $response_hour = $substract / 3600;
-                    $res_hours = round($response_hour);
-                    $days = round($r_days);
-
-                    if ($minutes == 4320 && $res_hours <= 1) {
-                        $text = 71;
-                        $adherence_level = 4;
-                        $this->messages_adherence($text, $adherence_level, $mob_no, $hcw_id);
-                    }
-                }
-            }
-           
             $response = $this->check_responses($hcw_id);
             foreach ($response as $res) {
                 $yes_no = $res->response;
@@ -2478,23 +2145,6 @@ class processor extends CI_Model {
 
             $this->db->query("UPDATE tbl_patientdetails set age_group = $x where id = $id");
         }
-    }
-
-    function getSubCountyPatients() {
-
-        $query = "SELECT 
-  tbl_master_facility.name AS facilityname,
-  tbl_master_facility.code as mfl,
-  tbl_county.name as county,
-  tbl_sub_county.name as subcounty
-FROM
-  tbl_master_facility 
-  
-  INNER JOIN tbl_county 
-    ON tbl_county.id = tbl_master_facility.county_id 
-  INNER JOIN tbl_sub_county 
-    ON tbl_sub_county.id = tbl_master_facility.Sub_County_ID ";
-        return $this->db->query($query)->result_array();
-    }
+    } 
 
 }
