@@ -28,72 +28,38 @@ class core extends MY_Controller {
         $this->load->model('processor');
         $this->data = new processor();
     }
+
 //runs every minute 
     function index() {
-        $core = $this->data->receiver_processor();
-        $third_uri = $this->uri->segment(3);
-        if (empty($third_uri) && $third_uri !== "json") {
-            $data["core"] = $core;
-            $this->load->view('welcome_message', $data);
-        } else {
-            echo json_encode($core);
-        }
+        $this->data->receiver_processor();
     }
-     function broadcast() {
-      $this->data->broadcast();
+
+    function broadcast() {
+        $this->data->broadcast();
     }
+
     function auto_broadcast() {
-      $this->data->automated_broadcast();
-    }        
-    
+        $this->data->automated_broadcast();
+    }
+
     //runs every 5 mins-handles adherence messages
     function adhere() {
-        $core = $this->data->adherence();
-        $third_uri = $this->uri->segment(3);
-        if (empty($third_uri) && $third_uri !== "json") {
-            $data["core"] = $core;
-            $this->load->view('welcome_message', $data);
-        } else {
-            echo json_encode($core);
-        }
+        $this->data->adherence();
     }
-   
-    
-    //runs every 5 mins handles responses sent to inbox 
-    
+    function sender (){
+        $this->data->sender();
+    }
+
     function responses() {
-        $core = $this->data->responses_to_adherence();
-        $third_uri = $this->uri->segment(3);
-        if (empty($third_uri) && $third_uri !== "json") {
-            $data["core"] = $core;
-            $this->load->view('welcome_message', $data);
-        } else {
-            echo json_encode($core);
-        }
+        $this->data->responses_to_adherence();
     }
-    
+
     //runs every 5 mins handles confirmatory message no.6 
     function confirm() {
-        $core = $this->data->confirmatory_message();
-        $third_uri = $this->uri->segment(3);
-        if (empty($third_uri) && $third_uri !== "json") {
-            $data["core"] = $core;
-            $this->load->view('welcome_message', $data);
-        } else {
-            echo json_encode($core);
-        }
+        $this->data->confirmatory_message();
     }
-    
-    function subcountypatients() {
-        $subcountypatients = $this->data->getSubCountyPatients();
-        $third_uri = $this->uri->segment(3);
-        if (empty($third_uri) && $third_uri !== "json") {
-            $data["subcountypatients"] = $subcountypatients;
-            $this->load->view('subcountypatients', $data);
-        } else {
-            echo json_encode($subcountypatients);
-        }
+    function rune() {
+        $this->data->run();
     }
-    
 
 }

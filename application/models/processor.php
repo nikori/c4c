@@ -53,7 +53,7 @@ class processor extends CI_Model {
 
                             if (is_string($f_name) && is_string($u_name) && ctype_alnum($password) && ctype_alnum($l_name) && ctype_digit($national_id) && (ctype_digit($gender) && strlen($gender) == '1') && (ctype_digit($cadre) && strlen($cadre) == '1') && (ctype_digit($facility_id) && strlen($facility_id) == '5')) {
                                 $this->android_register_update($mno, $cadre, $national_id, $l_name, $f_name, $gender, $yob, $facility_id, $hepatitis_b, $u_name, $password);
-                                echo "Registration through android app was successfull" . "</br>";
+                                //echo "Registration through android app was successfull" . "</br>";
                             }
                         }
 //Double registration on tbl_patietdetails- send: you are already registered                
@@ -149,6 +149,7 @@ class processor extends CI_Model {
                     $msg_id = 68;
                     $this->insert_to_outbox($mno, $msg_id);
                     //echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                    
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android == "REP" && $reg_rep_android != "C4C") {
 //Send pep to start registration -sent when one sends a non pep keyword
@@ -241,8 +242,32 @@ class processor extends CI_Model {
             }
         }
     }
+    function broadcast() {
+        $broad = $this->db->query("SELECT approval_status,id,date_created,county_id,sub_county_id,facility_id,msg,cadre_id,sms_status,sms_datetime FROM tbl_sms_broadcast WHERE sms_status='1'");
+        if ($broad->num_rows() > 0) {
+            $sms = $broad->result();
+            foreach ($sms as $x) {
+                $county_id = $x->county_id;
+                $msg_id = $x->id;
+                $sub_county_id = $x->sub_county_id;
+                $facility_id = $x->facility_id;
+                $cadre_id = $x->cadre_id;
+                $send_date = $x->date_created;
+                $approval_status = $x->approval_status;
 
-    function broadcast($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id) {
+                $current_date = date("Y-m-d");
+                $a_explode = explode(" ", $send_date);
+                $today = $a_explode[0];
+
+                $this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
+            }
+            if ($current_date == $today) {
+                //$this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
+            }
+        }
+    }
+
+    function b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id) {
 
         $this->db->select('mobile_no');
         $this->db->from('tbl_patientdetails');
@@ -289,7 +314,7 @@ class processor extends CI_Model {
     }
 
     function broadcast_sender() {
-        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level FROM tbl_logs_broadcast where status='1'")->result();
+        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level FROM tbl_logs_broadcast where status='1' limit 30")->result();
         foreach ($query as $value) {
             $id = $value->id;
             $messages_id = $value->message_id;
@@ -642,7 +667,7 @@ class processor extends CI_Model {
     }
 
     function check_if_mobile_exists($mno) {
-        $querycheck = $this->db->query("SELECT mobile_no,id FROM tbl_patientdetails where mobile_no='$mno'");
+        $querycheck = $this->db->query("SELECT mobile_no,id FROM tbl_patientdetails where mobile_no like '$mno'");
         if ($querycheck->num_rows() > 0) {
             return "exists";
         } elseif ($querycheck->num_rows() <= 0) {
@@ -846,7 +871,7 @@ class processor extends CI_Model {
     }
 
     function run() {
-        $query_a = $this->db->query("SELECT * FROM tbl_patientdetails_copy ORDER BY id DESC ");
+        $query_a = $this->db->query("SELECT * FROM tbl_patientdetails order by mobile_no desc limit 70 ");
         if ($query_a->num_rows() > 0) {
             $exposure_hours = $query_a->result();
             foreach ($exposure_hours as $e_hours) {
@@ -860,24 +885,25 @@ class processor extends CI_Model {
 //                $day = $a_explode[1];
 //                $yr = $a_explode[2];
 //                $nwe_date = $yr . "-" . $mn . "-" . $day;
-                $mobile = substr($mno, -9);
+                $mobile = substr($mno, -13);
                 $len = strlen($mobile);
 
-                if ($len < 10) {
-                    $to = "254" . $mobile;
+                if ($len < 13) {
+                    $to = "+" . $mobile;
                 }
-                echo $to;
+                //echo 'number..  '.$to."</br>";
                 //$broadcast_date = date("Y-m-d", strtotime($broadcastdate));
-                $this->db->trans_start();
+                $this->db->trans_start();              
 
-                $query = $this->db->query("update tbl_patientdetails_copy SET mobile_no='$to' where id='$id' ");
+                $query = $this->db->query("update tbl_patientdetails SET mobile_no='$to' where id='$id' ");
+                echo 'number..  '.$mobile."  ".$to."</br>";
 
                 $this->db->trans_complete();
                 if ($this->db->trans_status() === FALSE) {
                     //Throw an error
                     echo 'Error Occured...';
                 } else {
-                    echo 'Success update ....';
+                  /// echo 'number..  '.$to."</br>";
                 }
             }
         }
@@ -938,7 +964,7 @@ class processor extends CI_Model {
 
     function sender_api($dest, $msg) {
         
-        $senderid = "40149";
+        $senderid = 40149;
 
         $curl = curl_init();
 
@@ -1143,7 +1169,7 @@ class processor extends CI_Model {
 
 
                             if ($round_mins < 5) {
-                                $query_date = $this->db->query("SELECT msg,date_received,msg FROM tbl_logs_inbox WHERE mobile_no='$mob_no' AND msg LIKE '%yes' ");
+                                $query_date = $this->db->query("SELECT msg,date_received,msg FROM tbl_logs_inbox WHERE mobile_no='$mob_no' AND msg LIKE '%yes'");
                                 if ($query_date->num_rows() > 0) {
                                     $date = $query_date->result();
                                     foreach ($date as $dates) {
@@ -2146,5 +2172,4 @@ class processor extends CI_Model {
             $this->db->query("UPDATE tbl_patientdetails set age_group = $x where id = $id");
         }
     } 
-
 }
