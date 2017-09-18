@@ -6,10 +6,11 @@
  * and open the template in the editor.
  */
 
+
 class processor extends CI_Model {
 
     function receiver_processor() {
-//$text ;
+//Main Function to process input to tbl_logs_inbox
         $queryone = $this->db->query("SELECT mobile_no,date_received,level,msg,sms_status,id FROM tbl_logs_inbox WHERE sms_status='1' ORDER BY id DESC");
         if ($queryone->num_rows() > 0) {
             $mobile_no = $queryone->result();
@@ -26,6 +27,38 @@ class processor extends CI_Model {
                 $a_explode = explode("*", $m_text);
                 $reg_rep_uc = $a_explode[0];
                 $reg_rep_android = strtoupper($reg_rep_uc);
+//check if mobile number exists on tbl_staffdetails.
+                if ($this->CheckFacility($mno) == "empty" && $reg_rep_android == "BM") {
+                    //A user who is not a facility admin get notified when he/she tries to create a broadcast message
+                    $msg_id = 112;
+                    $this->insert_to_outbox($mno, $msg_id);
+                    echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                }
+                if ($this->CheckFacility($mno) == "exists" && $reg_rep_android == "BM") {
+                    $pick_Level = $this->CheckUserLevel($mno);
+                    foreach ($pick_Level as $value) {
+                        $user_level = $value->user_level;
+                        $county = $value->county;
+                        $scounty = $value->sub_county;
+                        $facility = $value->facility;
+                        if ($user_level < 5) {
+                            $msg_id = 112;
+                            $this->insert_to_outbox($mno, $msg_id);
+                        } elseif ($user_level == 5) {
+                            $current_time = date("Y-m-d H:i:s");
+                            $msg = explode("*", $text);
+                            $bText = $msg[1];
+                            $sendDate = $msg[2];
+                            $cadre = $msg[3];
+                            $bname = $msg[4];
+
+                            $this->InsertTblBroadcastTable($county, $scounty, $facility, $bname, $cadre, $bText, $sendDate);
+                            $msg_id = 113;
+                            $this->insert_to_outbox($mno, $msg_id);
+                            // echo 'Inserted to  tbl_sms_broadcast';                    
+                        }
+                    }
+                }
 //check if mobile number exists on tbl_patientdetails.
                 if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android == "REG" && $reg_rep_android != "REP") {
                     $hcw_p_level = $this->getLevel($mno, $level);
@@ -149,15 +182,14 @@ class processor extends CI_Model {
                     $msg_id = 68;
                     $this->insert_to_outbox($mno, $msg_id);
                     //echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
-                    
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android == "REP" && $reg_rep_android != "C4C") {
 //Send pep to start registration -sent when one sends a non pep keyword
                     $msg_id = 68;
                     $this->insert_to_outbox($mno, $msg_id);
-                   // echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                    // echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
                 }
-                if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C" && $reg_rep_android != "YES" && $reg_rep_android != "NO") {
+                if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C" && $reg_rep_android != "YES" && $reg_rep_android != "NO" && $reg_rep_android != "BM") {
                     $h_level = $this->getLevel($mno, $level);
                     foreach ($h_level as $value) {
                         $hcw_p_id = $value->id;
@@ -172,7 +204,7 @@ class processor extends CI_Model {
                         }
                     }
                 }
-//Before accepting an exposure report check if one is fully registered first.
+                //Before accepting an exposure report check if one is fully registered first.
                 if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android == "REP") {
                     $h_level = $this->getLevel($mno, $level);
                     foreach ($h_level as $value) {
@@ -194,6 +226,7 @@ class processor extends CI_Model {
                             }
 
                             if ($this->check_if_exposed_earlier($hcw_p_id) == "Yes") {
+
                                 $current_time = date("Y-m-d H:i:s");
                                 $re_ex_count = $count + 1;
 //Report a re- exposure through android app or incomplete exposure reported through sms
@@ -205,15 +238,15 @@ class processor extends CI_Model {
 
 
 
-                                echo "Location of exposure = " . $location . "</br>";
-                                echo "Exposure cause = " . $cause . "</br>";
-                                echo "Hours after exposure = " . $hours . "</br>";
-                                echo "Exposure Count = " . $re_ex_count . "</br>";
+//                                echo "Location of exposure = " . $location . "</br>";
+//                                echo "Exposure cause = " . $cause . "</br>";
+//                                echo "Hours after exposure = " . $hours . "</br>";
+//                                echo "Exposure Count = " . $re_ex_count . "</br>";
                                 if (ctype_digit($location) && ctype_digit($cause) && (ctype_digit($hours) )) {
                                     $this->android_reexposure($hcw_p_id, $mno, $location, $cause, $hours, $re_ex_count, $count, $current_time);
 //insert to tbl_reports_all for visual reports on exposure
                                     $this->android_exposure_report($hcw_p_id, $mno, $location, $cause, $hours, $current_time);
-                                    echo "Re-exposure report through android app was successfull" . "</br>";
+                                    // echo "Re-exposure report through android app was successfull" . "</br>";
                                 }
                             }
                             if ($this->check_if_exposed_earlier($hcw_p_id) == "No") {
@@ -223,25 +256,105 @@ class processor extends CI_Model {
                                 $cause = $msg[2];
                                 $hours = $msg[3];
 
-                                echo "Location of exposure = " . $location . "</br>";
-                                echo "Exposure cause =" . $cause . "</br>";
-                                echo "Hours after exposure = " . $hours . "</br>";
+//                                echo "Location of exposure = " . $location . "</br>";
+//                                echo "Exposure cause =" . $cause . "</br>";
+//                                echo "Hours after exposure = " . $hours . "</br>";
                                 if (ctype_digit($location) && ctype_digit($cause) && (ctype_digit($hours) )) {
                                     $this->android_report($hcw_p_id, $mno, $location, $cause, $hours, $current_time);
 //insert to tbl_reports_all for visual reports on exposure
                                     $this->android_exposure_report($hcw_p_id, $mno, $location, $cause, $hours, $current_time);
-                                    echo "Exposure report through android app was successfull" . "</br>";
+                                    //echo "Exposure report through android app was successfull" . "</br>";
                                 }
                             }
                         }
                     }
                 }
-
-//update tbl_logs_inbox sms_status to 2 to stop loops
+                //update tbl_logs_inbox sms_status to 2 to stop loops
                 $this->update_inbox($new_level, $mno);
             }
         }
     }
+
+    function InsertTblBroadcastTable($county, $scounty, $facility, $bname, $cadre, $bText, $sendDate) {
+        $query = $this->db->query("INSERT INTO tbl_sms_broadcast (county_id,sub_county_id,facility_id,cadre_id,msg,broadcastname)
+                                                  VALUES ('$county','$scounty','$facility','$cadre','$bText','$bname')");
+
+        //$query = $this->db->query("insert into tbl_sms_broadcast(county_id,sub_county_id,facility_id,cadre_id,msg,broadcastname)
+        // values ('$county','$scounty','$facility',$cadre','$bText','$bname')");
+    }
+
+    function check_if_mobile_exists($mno) {
+        $querycheck = $this->db->query("SELECT mobile_no,id FROM tbl_patientdetails where mobile_no like '$mno'");
+        if ($querycheck->num_rows() > 0) {
+            return "exists";
+        } elseif ($querycheck->num_rows() <= 0) {
+            return "empty";
+        }
+    }
+
+    function CheckUserLevel($mno) {
+        $queryone = $this->db->query("SELECT * FROM tbl_staffdetails where user_mobile like '$mno'");
+        if ($queryone->num_rows() > 0) {
+            $UserLevel = $queryone->result();
+            return $UserLevel;
+        } else if ($queryone->num_rows() <= 0) {
+            return "user level was not found";
+//echo 'nothing found';
+        }
+    }
+
+    function CheckFacility($mno) {
+        $querycheck = $this->db->query("SELECT user_level,user_mobile,facility FROM tbl_staffdetails where user_mobile like '$mno'");
+        if ($querycheck->num_rows() > 0) {
+            return "exists";
+        } elseif ($querycheck->num_rows() <= 0) {
+            return "empty";
+        }
+    }
+
+    function age_group() {
+
+        $get_dob = $this->db->query("Select tbl_patientdetails.id, tbl_patientdetails.DOB from tbl_patientdetails inner join tbl_master_facility "
+                        . "on tbl_master_facility.code = tbl_patientdetails.facility_id ")->result_array();
+
+        foreach ($get_dob as $value) {
+            $id = $value['id'];
+            $crnt_date = (int) date('Y');
+            $dob = $value['DOB'];
+            $mydate = (int) $dob;
+
+            if (($crnt_date - $mydate) >= 15 && ($crnt_date - $mydate) <= 19) {
+                $x = 1;
+            }
+            if (($crnt_date - $mydate) >= 20 && ($crnt_date - $mydate) <= 24) {
+                $x = 2;
+            }
+            if (($crnt_date - $mydate) >= 25 && ($crnt_date - $mydate) <= 29) {
+                $x = 3;
+            }
+            if (($crnt_date - $mydate) >= 30 && ($crnt_date - $mydate) <= 34) {
+                $x = 4;
+            }
+            if (($crnt_date - $mydate) >= 35 && ($crnt_date - $mydate) <= 39) {
+                $x = 5;
+            }
+            if (($crnt_date - $mydate) >= 40 && ($crnt_date - $mydate) <= 44) {
+                $x = 6;
+            }
+            if (($crnt_date - $mydate) >= 45 && ($crnt_date - $mydate) <= 49) {
+                $x = 7;
+            }
+            if (($crnt_date - $mydate) >= 50 && ($crnt_date - $mydate) <= 54) {
+                $x = 8;
+            }
+            if (($crnt_date - $mydate) > 54) {
+                $x = 9;
+            }
+
+            $this->db->query("UPDATE tbl_patientdetails set age_group = $x where id = $id");
+        }
+    }
+
     function broadcast() {
         $broad = $this->db->query("SELECT approval_status,id,date_created,county_id,sub_county_id,facility_id,msg,cadre_id,sms_status,sms_datetime FROM tbl_sms_broadcast WHERE sms_status='1'");
         if ($broad->num_rows() > 0) {
@@ -260,6 +373,8 @@ class processor extends CI_Model {
                 $today = $a_explode[0];
 
                 $this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
+                $status = '2';
+                $query_update = $this->db->query("UPDATE tbl_sms_broadcast SET sms_status ='$status' where id='$msg_id'");
             }
             if ($current_date == $today) {
                 //$this->b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id);
@@ -269,25 +384,32 @@ class processor extends CI_Model {
 
     function b_data($county_id, $msg_id, $sub_county_id, $facility_id, $cadre_id) {
 
+
+
         $this->db->select('mobile_no');
         $this->db->from('tbl_patientdetails');
         $this->db->join('master_facility', 'patientdetails.facility_id=master_facility.code ');
 
 
         if (!empty($cadre_id)) {
-            if ($cadre_id == 0) {
+            if ($cadre_id == 10) {
                 
             } else {
                 $this->db->join('cadre', 'cadre.id = tbl_patientdetails.cadre_id');
                 $this->db->where('cadre_id', $cadre_id);
             }
         }
-        if (!empty($facility_id)) {
 
-            $this->db->where('patientdetails.facility_id', $facility_id);
+        if (!empty($facility_id)) {
+            if ($facility_id == 999) {
+                
+            } else {
+
+                $this->db->where('patientdetails.facility_id', $facility_id);
+            }
         }
         if (!empty($county_id)) {
-            if ($county_id == 0) {
+            if ($county_id == 48) {
                 
             } else {
                 $this->db->join('county', 'county.id=master_facility.county_id');
@@ -295,22 +417,29 @@ class processor extends CI_Model {
             }
         }
         if (!empty($sub_county_id)) {
+            if ($sub_county_id == 291) {
+                
+            } else {
 
-            $this->db->join('sub_county', 'sub_county.id = master_facility.Sub_County_ID');
-            $this->db->where('sub_county.id', $sub_county_id);
+                $this->db->join('sub_county', 'sub_county.id = master_facility.Sub_County_ID');
+                $this->db->where('sub_county.id', $sub_county_id);
+            }
         }
         $sql = $this->db->get()->result();
         foreach ($sql as $x) {
             $mno = $x->mobile_no;
+            //echo $cadre_id ." ".$msg_id." ".$mno."</br> ";
+
             $this->insert_tbl_logs_broadcast($mno, $msg_id);
+            
             //$sql = $this->db->query($query)->result_array();                        
         }
+        //exit();
         return $sql;
     }
 
     function insert_tbl_logs_broadcast($mno, $msg_id) {
         $query = $this->db->query("INSERT INTO tbl_logs_broadcast (message_id,mobile_no) VALUES ('$msg_id','$mno')");
-       
     }
 
     function broadcast_sender() {
@@ -329,19 +458,19 @@ class processor extends CI_Model {
                 $len = strlen($mobile);
 
                 if ($len < 10) {
-                    $dest = "+254" . $mobile;                    
+                    $dest = "+254" . $mobile;
                 }
                 if ($dest <> '') {
                     //call sender api fn to send messages
                     $this->sender_api($dest, $msg);
+
+//update status to sent to stop loops
+                    $status = '2';
+                    $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET status ='$status' where mobile_no='$dest'");
                 } else {
                     $out_put = " Reason: Phone number is missing";
                     return $out_put;
                 }
-//update status to sent to stop loops
-                $status = '2';
-                $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET STATUS ='$status' where mobile_no='$to'");
-                $query_update = $this->db->query("UPDATE tbl_sms_broadcast SET sms_STATUS ='$status' ");
             }
         }
     }
@@ -666,15 +795,6 @@ class processor extends CI_Model {
         }
     }
 
-    function check_if_mobile_exists($mno) {
-        $querycheck = $this->db->query("SELECT mobile_no,id FROM tbl_patientdetails where mobile_no like '$mno'");
-        if ($querycheck->num_rows() > 0) {
-            return "exists";
-        } elseif ($querycheck->num_rows() <= 0) {
-            return "empty";
-        }
-    }
-
     function messages_adherence($text, $adherence_level, $mob_no, $hcw_id) {
         $query = $this->db->query("INSERT INTO tbl_logs_outbox (message_id,mobile_no) VALUES ('$text','$mob_no')");
 //$query = $this->db->query("update tbl_reports set adherence_level='$adherence_level' where p_details_id='$hcw_id'");
@@ -871,7 +991,7 @@ class processor extends CI_Model {
     }
 
     function run() {
-        $query_a = $this->db->query("SELECT * FROM tbl_patientdetails order by mobile_no desc limit 70 ");
+        $query_a = $this->db->query("SELECT * FROM tbl_logs_outbox_plus ");
         if ($query_a->num_rows() > 0) {
             $exposure_hours = $query_a->result();
             foreach ($exposure_hours as $e_hours) {
@@ -888,22 +1008,25 @@ class processor extends CI_Model {
                 $mobile = substr($mno, -13);
                 $len = strlen($mobile);
 
+
                 if ($len < 13) {
                     $to = "+" . $mobile;
                 }
+//                echo 'number..  ' . $to ."</br>";
+//                 exit();
                 //echo 'number..  '.$to."</br>";
                 //$broadcast_date = date("Y-m-d", strtotime($broadcastdate));
-                $this->db->trans_start();              
+                $this->db->trans_start();
 
-                $query = $this->db->query("update tbl_patientdetails SET mobile_no='$to' where id='$id' ");
-                echo 'number..  '.$mobile."  ".$to."</br>";
+                $query = $this->db->query("update tbl_logs_outbox_plus SET mobile_no='$to' where id='$id' ");
+                echo 'number..  ' . $mobile . "  " . $to . "</br>";
 
                 $this->db->trans_complete();
                 if ($this->db->trans_status() === FALSE) {
                     //Throw an error
                     echo 'Error Occured...';
                 } else {
-                  /// echo 'number..  '.$to."</br>";
+                    /// echo 'number..  '.$to."</br>";
                 }
             }
         }
@@ -951,7 +1074,6 @@ class processor extends CI_Model {
                 }
 
                 if ($dest <> '') {
-
                     //call sender api fn to send messages
                     $this->sender_api($dest, $msg);
                 } else {
@@ -963,8 +1085,8 @@ class processor extends CI_Model {
     }
 
     function sender_api($dest, $msg) {
-        
-        $senderid = 40149;
+
+        $senderid = 40145;
 
         $curl = curl_init();
 
@@ -2171,5 +2293,6 @@ class processor extends CI_Model {
 
             $this->db->query("UPDATE tbl_patientdetails set age_group = $x where id = $id");
         }
-    } 
+    }
+
 }

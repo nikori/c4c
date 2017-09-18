@@ -28,20 +28,22 @@ class core extends MY_Controller {
         $this->load->model('processor');
         $this->data = new processor();
     }
-
 //runs every minute 
     function index() {
         $this->data->receiver_processor();
     }
-
     function broadcast() {
         $this->data->broadcast();
     }
-
+    function BroadcastSender() {
+        $this->data->broadcast_sender();
+    }
+    function age_group() {
+        $this->data->age_group();
+    }
     function auto_broadcast() {
         $this->data->automated_broadcast();
     }
-
     //runs every 5 mins-handles adherence messages
     function adhere() {
         $this->data->adherence();
@@ -49,11 +51,9 @@ class core extends MY_Controller {
     function sender (){
         $this->data->sender();
     }
-
     function responses() {
         $this->data->responses_to_adherence();
     }
-
     //runs every 5 mins handles confirmatory message no.6 
     function confirm() {
         $this->data->confirmatory_message();
