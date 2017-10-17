@@ -6,7 +6,6 @@
  * and open the template in the editor.
  */
 
-
 class processor extends CI_Model {
 
     function receiver_processor() {
@@ -27,12 +26,13 @@ class processor extends CI_Model {
                 $a_explode = explode("*", $m_text);
                 $reg_rep_uc = $a_explode[0];
                 $reg_rep_android = strtoupper($reg_rep_uc);
+
 //check if mobile number exists on tbl_staffdetails.
                 if ($this->CheckFacility($mno) == "empty" && $reg_rep_android == "BM") {
                     //A user who is not a facility admin get notified when he/she tries to create a broadcast message
                     $msg_id = 112;
                     $this->insert_to_outbox($mno, $msg_id);
-                    echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
+                    // echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
                 }
                 if ($this->CheckFacility($mno) == "exists" && $reg_rep_android == "BM") {
                     $pick_Level = $this->CheckUserLevel($mno);
@@ -41,7 +41,7 @@ class processor extends CI_Model {
                         $county = $value->county;
                         $scounty = $value->sub_county;
                         $facility = $value->facility;
-                        if ($user_level < 5) {
+                        if ($user_level != 5) {
                             $msg_id = 112;
                             $this->insert_to_outbox($mno, $msg_id);
                         } elseif ($user_level == 5) {
@@ -59,14 +59,46 @@ class processor extends CI_Model {
                         }
                     }
                 }
+                if ($this->CheckFacility($mno) == "exists" && $reg_rep_android != "BM" && $reg_rep_android == "YES" || $reg_rep_android == "NO") {
+                    $Sup = $this->getSuperVisor($mno);
+                    foreach ($Sup as $m) {
+                        $SupNumber = $m->user_mobile;
+                        $SupMfl = $m->facility;
+
+                        $student = $this->getStudent($SupMfl);
+                        foreach ($student as $m) {
+                            $CheckInTime = $m->checkin_time;
+                            $StudMfl = $m->facility_id;
+                            $StudId = $m->id;
+
+
+                            $date_sent = strtotime($CheckInTime);
+                            $datetime = strtotime("now");
+
+                            $substract = $datetime - $date_sent;
+                            $r_minutes = $substract / 60;
+                            //$seconds=$substract/60000;        
+                            $minutes = round($r_minutes);
+
+
+                            if ($SupMfl == $StudMfl) {
+                                if ($minutes < 5) {
+                                    echo 'This=>' . " " . $CheckInTime . "  " . $StudId . "<br>";
+
+                                    //Process Confirmation from the supervisor
+                                    $this->UpdateCheckIn($StudMfl, $reg_rep_android, $StudId, $CheckInTime);
+                                }
+                            }
+                        }
+                    }
+                }
 //check if mobile number exists on tbl_patientdetails.
                 if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android == "REG" && $reg_rep_android != "REP") {
                     $hcw_p_level = $this->getLevel($mno, $level);
                     foreach ($hcw_p_level as $m) {
                         $p_level = $m->level;
                         $hcw_id = $m->id;
-                        echo "Health care worker level " . $p_level . "</br>";
-
+                        //  echo "Health care worker level " . $p_level . "</br>";
 //Didn't complete registration earlier so this completes the registration through android app
                         if ($p_level < 5) {
                             $msg = explode("*", $text);
@@ -169,12 +201,9 @@ class processor extends CI_Model {
                     }
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android == "C4C") {
-
 //process keyword pep sends kindly  send your name
-
                     $this->insert_outbox_not_registered($mno, $new_level);
                     $this->insert_patientdetails_insert_number($mno, $new_level);
-
                     //echo 'Inserted mobile number to patientdetails and tbl_logs_outbox ; send- welcome to c4c send your name and id ,text=sent';
                 }
                 if ($this->check_if_mobile_exists($mno) == "empty" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C") {
@@ -189,7 +218,18 @@ class processor extends CI_Model {
                     $this->insert_to_outbox($mno, $msg_id);
                     // echo 'Inserted to  tbl_logs_outbox- text; Send pep to start reg';
                 }
-                if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C" && $reg_rep_android != "YES" && $reg_rep_android != "NO" && $reg_rep_android != "BM") {
+                if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android == "CHKIN") {
+                    $current_time = date("Y-m-d H:i:s");
+                    $msg = explode("*", $text);
+                    $gps = $msg[1];
+
+                    //Insert into checkin table 
+                    $this->InsertCheckIn($mno, $current_time, $gps);
+                    //Text the supervisor
+                    $msg_id = 115;
+                    $this->insert_to_outbox($mno, $msg_id);
+                }
+                if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android != "REP" && $reg_rep_android != "C4C" && $reg_rep_android != "YES" && $reg_rep_android != "NO" && $reg_rep_android != "BM" && $reg_rep_android != "CHKIN") {
                     $h_level = $this->getLevel($mno, $level);
                     foreach ($h_level as $value) {
                         $hcw_p_id = $value->id;
@@ -204,7 +244,7 @@ class processor extends CI_Model {
                         }
                     }
                 }
-                //Before accepting an exposure report check if one is fully registered first.
+                //Before accepting an exposure report, check if one is fully registered.
                 if ($this->check_if_mobile_exists($mno) == "exists" && $reg_rep_android != "REG" && $reg_rep_android == "REP") {
                     $h_level = $this->getLevel($mno, $level);
                     foreach ($h_level as $value) {
@@ -212,9 +252,7 @@ class processor extends CI_Model {
                         $mno = $x->mobile_no;
                         $hcw_r_level = $value->level;
 
-                        echo "HCW id on tbl_patientdetails = " . $hcw_p_id . "</br>";
-
-
+                        // echo "HCW id on tbl_patientdetails = " . $hcw_p_id . "</br>";
 //Checks if one is fully registered on tbl_patientdetails else if not send a text to request one to complete registration
                         if ($hcw_r_level > 3) {
                             $query_e_count = $this->db->query("SELECT re_exposure_count FROM tbl_reports where p_details_id='$hcw_p_id'");
@@ -270,7 +308,166 @@ class processor extends CI_Model {
                     }
                 }
                 //update tbl_logs_inbox sms_status to 2 to stop loops
-                $this->update_inbox($new_level, $mno);
+                //$this->update_inbox($new_level, $mno);
+            }
+        }
+    }
+
+    function UpdateCheckIn($StudMfl, $reg_rep_android, $StudId, $CheckInTime) {
+        //A switch to process Yes or No response from the supervisor.
+        switch ($reg_rep_android) {
+            case "YES":
+                $CheckinStatus = 1;
+                break;
+            case "NO":
+                $CheckinStatus = 2;
+                break;
+        }
+        echo 'This=> ' . $CheckInTime . " ID " . $StudId;
+//        exit();
+        $query = $this->db->query("update tbl_checkin set CheckInStatus='$CheckinStatus' where  checkin_time ='$CheckInTime'");
+    }
+
+    function InsertCheckIn($mno, $current_time, $gps) {
+        $level = "";
+        $StudMfl = $this->getLevel($mno, $level);
+        foreach ($StudMfl as $m) {
+            $StudentMfl = $m->facility_id;
+        }
+        // echo 'This ' . $gps . ' ' . $mno.' '.$StudentMfl;
+//        exit();
+        $query = $this->db->query("INSERT INTO tbl_checkin (mobile_no,checkin_time,facility_id)VALUES ('$mno','$current_time','$StudentMfl')");
+    }
+
+    function getStudent($SupMfl) {
+        $querystud = $this->db->query("SELECT id,mobile_no,checkin_time,facility_id FROM tbl_checkin where facility_id='$SupMfl'");
+        if ($querystud->num_rows() > 0) {
+            $StudentMfl = $querystud->result();
+            return $StudentMfl;
+        } else if ($querystud->num_rows() <= 0) {
+            return "Student was not found";
+        }
+    }
+
+    function CheckFacility($mno) {
+        $querycheck = $this->db->query("SELECT user_level,user_mobile,facility FROM tbl_staffdetails where user_mobile like '$mno'");
+        if ($querycheck->num_rows() > 0) {
+            return "exists";
+        } elseif ($querycheck->num_rows() <= 0) {
+            return "empty";
+        }
+    }
+
+    function getSuperVisor($mno) {
+        $querySvisor = $this->db->query("SELECT user_level,user_mobile,facility FROM tbl_staffdetails where user_mobile = '$mno' AND  user_level=6");
+        if ($querySvisor->num_rows() > 0) {
+            $sVisor = $querySvisor->result();
+            return $sVisor;
+        } else if ($querySvisor->num_rows() <= 0) {
+            return "Supervisor was not found";
+//echo 'nothing found';
+        }
+    }
+
+    function getLevel($mno, $level) {
+        $queryone = $this->db->query("SELECT level,id,mobile_no,facility_id FROM tbl_patientdetails where mobile_no='$mno'");
+        if ($queryone->num_rows() > 0) {
+            $hcw_level = $queryone->result();
+            return $hcw_level;
+        } else if ($queryone->num_rows() <= 0) {
+            return "HCW level was not found";
+//echo 'nothing found';
+        }
+    }
+
+    function TextSuperVisor() {
+        $query_outbox = $this->db->query("SELECT user_mobile,facility FROM tbl_staffdetails WHERE user_level=6");
+        if ($query_outbox->num_rows() > 0) {
+            $minutes = $query_outbox->result();
+            foreach ($minutes as $m) {
+                $mno = $m->user_mobile;
+                $mfl = $m->facility;
+
+                $query_checkin = $this->db->query("SELECT facility_id,mobile_no,checkin_time FROM tbl_checkin");
+                if ($query_checkin->num_rows() > 0) {
+                    $chk = $query_checkin->result();
+                    foreach ($chk as $m) {
+                        $mno = $m->mobile_no;
+                        $StudFacility = $m->facility_id;
+
+                        $checkin = $m->checkin_time;
+                        $date_sent = strtotime($checkin);
+                        $datetime = strtotime("now");
+
+                        $substract = $datetime - $date_sent;
+                        $r_minutes = $substract / 60;
+                        $minutes = round($r_minutes);
+
+                        if ($mfl == $StudFacility) {
+                            //echo 'This=>'." ".$minutes."  ".$mobile_no;
+                            if ($minutes < 5) {
+                                $this->notify_supervisor($mno);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //text to notify supervisor at the facility
+    function notify_supervisor($mno) {
+        $msg_id = 114;
+        $this->insert_outbox($mno, $msg_id);
+    }
+
+    //send broadcast messages every 14 days
+    function automated_broadcast() {
+        $querytwo = $this->db->query("SELECT id,messages FROM tbl_messages WHERE category_id='6'");
+        if ($querytwo->num_rows() > 0) {
+            $query_hjw = $querytwo->result();
+            foreach ($query_hjw as $m) {
+                $mid = $m->id;
+                $query_p = $this->db->query("SELECT mobile_no FROM tbl_patientdetails LEFT JOIN tbl_reports ON tbl_reports.p_details_id=tbl_patientdetails.id");
+                if ($query_p->num_rows() > 0) {
+                    $query_hww = $query_p->result();
+                    foreach ($query_hww as $rep_hcw) {
+                        $mno = $rep_hcw->mobile_no;
+                        $query_outbox = $this->db->query("SELECT id,mobile_no,message_id,date_created FROM tbl_logs_outbox WHERE message_id='$mid' and mobile_no='$mno'");
+                        if ($query_outbox->num_rows() > 0) {
+                            $data = $query_outbox->result();
+                            foreach ($data as $o_days) {
+                                $text_id = $o_days->message_id;
+                                $r_date = $o_days->date_created;
+
+                                $current_time = date("Y-m-d H:i:s");
+                                $datetime = strtotime("now");
+                                $report_date = strtotime($r_date);
+                                $no_after = $datetime - $report_date;
+                                $ddays = $no_after / 86400;
+                                $r_days = round($ddays);
+                                $hours = $no_after / 3600;
+                            }
+
+                            if ($r_days == 14 && $text_id != 111) {
+                                $msg_id = $text_id + 1;
+                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
+                                $this->insert_autobroadcast($mno, $msg_id);
+                            }
+                            if ($r_days == 14 && $text_id == 111) {
+                                $msg_id = $text_id - 19;
+                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
+                                $this->insert_autobroadcast($mno, $msg_id);
+                            }
+                        }if ($query_outbox->num_rows() == 0) {
+                            if ($mid == 93) {
+                                $msg_id = 93;
+                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
+                                $this->insert_autobroadcast($mno, $msg_id);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -278,9 +475,6 @@ class processor extends CI_Model {
     function InsertTblBroadcastTable($county, $scounty, $facility, $bname, $cadre, $bText, $sendDate) {
         $query = $this->db->query("INSERT INTO tbl_sms_broadcast (county_id,sub_county_id,facility_id,cadre_id,msg,broadcastname)
                                                   VALUES ('$county','$scounty','$facility','$cadre','$bText','$bname')");
-
-        //$query = $this->db->query("insert into tbl_sms_broadcast(county_id,sub_county_id,facility_id,cadre_id,msg,broadcastname)
-        // values ('$county','$scounty','$facility',$cadre','$bText','$bname')");
     }
 
     function check_if_mobile_exists($mno) {
@@ -300,15 +494,6 @@ class processor extends CI_Model {
         } else if ($queryone->num_rows() <= 0) {
             return "user level was not found";
 //echo 'nothing found';
-        }
-    }
-
-    function CheckFacility($mno) {
-        $querycheck = $this->db->query("SELECT user_level,user_mobile,facility FROM tbl_staffdetails where user_mobile like '$mno'");
-        if ($querycheck->num_rows() > 0) {
-            return "exists";
-        } elseif ($querycheck->num_rows() <= 0) {
-            return "empty";
         }
     }
 
@@ -431,7 +616,7 @@ class processor extends CI_Model {
             //echo $cadre_id ." ".$msg_id." ".$mno."</br> ";
 
             $this->insert_tbl_logs_broadcast($mno, $msg_id);
-            
+
             //$sql = $this->db->query($query)->result_array();                        
         }
         //exit();
@@ -440,39 +625,6 @@ class processor extends CI_Model {
 
     function insert_tbl_logs_broadcast($mno, $msg_id) {
         $query = $this->db->query("INSERT INTO tbl_logs_broadcast (message_id,mobile_no) VALUES ('$msg_id','$mno')");
-    }
-
-    function broadcast_sender() {
-        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level FROM tbl_logs_broadcast where status='1' limit 30")->result();
-        foreach ($query as $value) {
-            $id = $value->id;
-            $messages_id = $value->message_id;
-            $mobile_no = $value->mobile_no;
-
-            $query_2 = $this->db->query("SELECT msg,id FROM tbl_sms_broadcast WHERE id='$messages_id'")->result();
-
-            foreach ($query_2 as $value) {
-                $msg = $value->msg;
-
-                $mobile = substr($mobile_no, -9);
-                $len = strlen($mobile);
-
-                if ($len < 10) {
-                    $dest = "+254" . $mobile;
-                }
-                if ($dest <> '') {
-                    //call sender api fn to send messages
-                    $this->sender_api($dest, $msg);
-
-//update status to sent to stop loops
-                    $status = '2';
-                    $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET status ='$status' where mobile_no='$dest'");
-                } else {
-                    $out_put = " Reason: Phone number is missing";
-                    return $out_put;
-                }
-            }
-        }
     }
 
     function insert_or_update_tblpatientdetails($new_level, $text, $level, $mno) {
@@ -1066,6 +1218,7 @@ class processor extends CI_Model {
 
                     $msg = $text;
                 }
+
                 $mobile = substr($mobile_no, -9);
                 $len = strlen($mobile);
 
@@ -1076,6 +1229,43 @@ class processor extends CI_Model {
                 if ($dest <> '') {
                     //call sender api fn to send messages
                     $this->sender_api($dest, $msg);
+
+//update status to sent to stop loops
+                    $status = '2';
+                    $query_update = $this->db->query("UPDATE tbl_logs_outbox SET STATUS ='$status' where mobile_no='$mobile_no'");
+                } else {
+                    $out_put = " Reason: Phone number is missing";
+                    return $out_put;
+                }
+            }
+        }
+    }
+
+    function broadcast_sender() {
+        $query = $this->db->query("SELECT id,message_id,mobile_no,p_level FROM tbl_logs_broadcast where status='1' limit 30")->result();
+        foreach ($query as $value) {
+            $id = $value->id;
+            $messages_id = $value->message_id;
+            $mobile_no = $value->mobile_no;
+
+            $query_2 = $this->db->query("SELECT msg,id FROM tbl_sms_broadcast WHERE id='$messages_id'")->result();
+
+            foreach ($query_2 as $value) {
+                $msg = $value->msg;
+
+                $mobile = substr($mobile_no, -9);
+                $len = strlen($mobile);
+
+                if ($len < 10) {
+                    $dest = "+254" . $mobile;
+                }
+                if ($dest <> '') {
+                    //call sender api fn to send messages
+                    $this->sender_api($dest, $msg);
+
+//update status to sent to stop loops
+                    $status = '2';
+                    $query_update = $this->db->query("UPDATE tbl_logs_broadcast SET status ='$status' where mobile_no='$mobile_no'");
                 } else {
                     $out_put = " Reason: Phone number is missing";
                     return $out_put;
@@ -1092,7 +1282,7 @@ class processor extends CI_Model {
 
         curl_setopt_array($curl, array(
             CURLOPT_PORT => "3001",
-            CURLOPT_URL => "http://197.248.10.20:3001/api/senders/sender",
+            CURLOPT_URL => "http://localhost:3001/api/senders/sender",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => "",
             CURLOPT_MAXREDIRS => 10,
@@ -1115,8 +1305,6 @@ class processor extends CI_Model {
         if ($err) {
             return "cURL Error #:" . $err;
         } else {
-            $status = '2';
-            $query_update = $this->db->query("UPDATE tbl_logs_outbox SET STATUS ='$status' where mobile_no='$dest'");
             return $response;
         }
     }
@@ -1151,17 +1339,6 @@ class processor extends CI_Model {
         $this->update_level_patientdetails($mno, $new_level);
     }
 
-    function getLevel($mno, $level) {
-        $queryone = $this->db->query("SELECT level,id,mobile_no FROM tbl_patientdetails where mobile_no='$mno'");
-        if ($queryone->num_rows() > 0) {
-            $hcw_level = $queryone->result();
-            return $hcw_level;
-        } else if ($queryone->num_rows() <= 0) {
-            return "HCW level was not found";
-//echo 'nothing found';
-        }
-    }
-
     function check_re_exposure($id) {
         $q_check = $this->db->query("SELECT p_details_id FROM tbl_reports where p_details_id='$id'");
         if ($q_check->num_rows() > 0) {
@@ -1179,57 +1356,6 @@ class processor extends CI_Model {
         } else if ($q_check->num_rows() <= 0) {
             return "Not Found";
 //echo 'nothing found';
-        }
-    }
-
-    //send broadcast messages every 14 days
-    function automated_broadcast() {
-        $querytwo = $this->db->query("SELECT id,messages FROM tbl_messages WHERE category_id='6'");
-        if ($querytwo->num_rows() > 0) {
-            $query_hjw = $querytwo->result();
-            foreach ($query_hjw as $m) {
-                $mid = $m->id;
-                $query_p = $this->db->query("SELECT mobile_no FROM tbl_patientdetails LEFT JOIN tbl_reports ON tbl_reports.p_details_id=tbl_patientdetails.id");
-                if ($query_p->num_rows() > 0) {
-                    $query_hww = $query_p->result();
-                    foreach ($query_hww as $rep_hcw) {
-                        $mno = $rep_hcw->mobile_no;
-                        $query_outbox = $this->db->query("SELECT id,mobile_no,message_id,date_created FROM tbl_logs_outbox WHERE message_id='$mid' and mobile_no='$mno'");
-                        if ($query_outbox->num_rows() > 0) {
-                            $data = $query_outbox->result();
-                            foreach ($data as $o_days) {
-                                $text_id = $o_days->message_id;
-                                $r_date = $o_days->date_created;
-
-                                $current_time = date("Y-m-d H:i:s");
-                                $datetime = strtotime("now");
-                                $report_date = strtotime($r_date);
-                                $no_after = $datetime - $report_date;
-                                $ddays = $no_after / 86400;
-                                $r_days = round($ddays);
-                                $hours = $no_after / 3600;
-                            }
-
-                            if ($r_days == 14 && $text_id != 111) {
-                                $msg_id = $text_id + 1;
-                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
-                                $this->insert_autobroadcast($mno, $msg_id);
-                            }
-                            if ($r_days == 14 && $text_id == 111) {
-                                $msg_id = $text_id - 19;
-                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
-                                $this->insert_autobroadcast($mno, $msg_id);
-                            }
-                        }if ($query_outbox->num_rows() == 0) {
-                            if ($mid == 93) {
-                                $msg_id = 93;
-                                //echo "This =  " . " " . $mno . " " . $msg_id . "</br>" . "</br>";
-                                $this->insert_autobroadcast($mno, $msg_id);
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -1953,7 +2079,7 @@ class processor extends CI_Model {
                             echo "Minutes after message was received in tbl_inbox = " . $round_mins . "</br> ";
 
                             if ($round_mins < 5) {
-                                $text = 86;
+                                $text = 84;
                                 $new_adherence = 1;
                                 $this->messages_responses($text, $mob_no, $new_adherence, $hcw_id);
                             }

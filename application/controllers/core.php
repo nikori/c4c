@@ -61,5 +61,9 @@ class core extends MY_Controller {
     function rune() {
         $this->data->run();
     }
+    //Text supervisor to respond
+    function TextSup() {
+        $this->data->TextSuperVisor();
+    }
 
 }
