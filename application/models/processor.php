@@ -308,7 +308,7 @@ class processor extends CI_Model {
                     }
                 }
                 //update tbl_logs_inbox sms_status to 2 to stop loops
-                //$this->update_inbox($new_level, $mno);
+                $this->update_inbox($new_level, $mno);
             }
         }
     }
